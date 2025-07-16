@@ -1,0 +1,1 @@
+sudo apt install libpaho-mqttpp3-dev libpaho-mqtt-dev
