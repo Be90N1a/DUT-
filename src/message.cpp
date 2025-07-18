@@ -78,6 +78,6 @@ void Message::dispatch(std::string all) {
     sig = all.substr(0, 0x100);
     tag = all.substr(0x100, 0x40);
     context = all.substr(0x100 + 0x40);
-}
+} 
 
 } // namespace crypto

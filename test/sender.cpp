@@ -9,13 +9,16 @@ void p(){
 
 int main() {
     DHManager alice("alice");
-
     alice.DHbind("tcp://127.0.0.1:5555");
     alice.DHrecv();
-// p();
+
+p();
 
     int fd=alice.DHconnect("tcp://127.0.0.1:6666","bob");
-p();
+    fd=alice.DHconnect("tcp://127.0.0.1:6666","bob");
+
+    
+// p();
 
     
     std::string line;

@@ -3,7 +3,7 @@
 
 ZmqCommunicator::ZmqCommunicator(std::string bindAddress, bool isSer,std::string name)
     : context_(1), 
-      socket_(context_, isSer ? ZMQ_REP : ZMQ_REQ),
+      socket_(context_, isSer ? ZMQ_DEALER : ZMQ_DEALER),
       running_(false),
       isServer_(isSer)
 {
@@ -12,7 +12,7 @@ ZmqCommunicator::ZmqCommunicator(std::string bindAddress, bool isSer,std::string
         std::cout<<bindAddress<<std::endl;
         socket_.bind(bindAddress); 
     } else {
-        crt_path="./cert/"+name+".crt";
+        crt_path="./cert/"+name+".cert";
         socket_.connect(bindAddress);
     }
     // puts("222");
@@ -34,11 +34,11 @@ void ZmqCommunicator::startReceiving(MessageHandler handler) {
             std::string msg(static_cast<char*>(request.data()), request.size());
             handler(msg);
 
-            if (isServer_) {
-                zmq::message_t reply(2);
-                memcpy(reply.data(), "OK", 2);
-                socket_.send(reply, zmq::send_flags::none);
-            }
+            // if (isServer_) {
+            //     zmq::message_t reply(2);
+            //     memcpy(reply.data(), "OK", 2);
+            //     socket_.send(reply, zmq::send_flags::none);
+            // }
         }
     });
 }

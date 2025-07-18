@@ -29,6 +29,8 @@ std::string Certificate::signWithPrivateKey(const std::string& privkey_file, con
 
 bool Certificate::verifyWithCert(const std::string& cert_file, const std::string& message, const std::string& signature) {
     FILE* fp = fopen(cert_file.c_str(), "r");
+    // std::cout<<cert_file.c_str()<<std::endl;
+    // std::cout<<fp<<std::endl;
     X509* cert = PEM_read_X509(fp, nullptr, nullptr, nullptr);
     fclose(fp);
 

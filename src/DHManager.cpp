@@ -76,28 +76,32 @@ void DHManager::DHbind(const std::string& bindAddress){
 int DHManager::DHconnect(const std::string& bindAddress,std::string name) {
     // 遍历 zcs 找第一个空指针（nullptr）
     int idx=-1;
-    for (int i = 0; i < zcs.size(); ++i) {
-        if (zcs[i] == nullptr) {
-            zcs[i] = new ZmqCommunicator(bindAddress,0,name);
-            idx=i;
+    for(int j=0;j<3;j++){
+        idx=-1;
+        for (int i = 0; i < zcs.size(); ++i) {
+            if (zcs[i] == nullptr) {
+                zcs[i] = new ZmqCommunicator(bindAddress,0,name);
+                idx=i;
+            }
         }
+        
+        if(idx==-1){
+            // 如果没找到空位，可以选择扩展数组并添加新元素
+            ZmqCommunicator* newZc = new ZmqCommunicator(bindAddress,0,name);
+            zcs.push_back(newZc);
+            idx=zcs.size() - 1;
+        }
+        // puts("222");
+        // std::cout<< zcs[0]<<std::endl;
+        // std::cout<< idx<<std::endl;
+        // std::cout<< zcs[idx]<<std::endl;
+        std::string sig = crypto::Certificate::signWithPrivateKey(key_path, pub);
+        crypto::Message buf(sig,std::string(0x40, '\0'),pub);
+        std::string line=buf.merge();
+        
+        // std::cout<< name<<"  "<<line<<std::endl;
+        zcs[idx]->send(line);
     }
-    
-    if(idx==-1){
-        // 如果没找到空位，可以选择扩展数组并添加新元素
-        ZmqCommunicator* newZc = new ZmqCommunicator(bindAddress,0,name);
-        zcs.push_back(newZc);
-        idx=zcs.size() - 1;
-    }
-    // puts("222");
-    // std::cout<< zcs[0]<<std::endl;
-    // std::cout<< idx<<std::endl;
-    // std::cout<< zcs[idx]<<std::endl;
-    std::string sig = crypto::Certificate::signWithPrivateKey(key_path, pub);
-    crypto::Message buf(sig,std::string(0x40, '\0'),pub);
-    std::string line=buf.merge();
-    zcs[idx]->send(line);
-
     return idx;
 }
 
@@ -121,15 +125,28 @@ void DHManager::DHsend(int fd,const std::string& msg){
 void DHManager::DHrecv(){
     zcs[0]->startReceiving([this](const std::string& msg) { 
         crypto::Message rcv(msg);
+        // if()
         if(rcv.getTag()==std::string(0x40, '\0')){   //magic
-            for (int i = 0; i < zcs.size(); ++i) {
+            for (int i = 1; i < zcs.size(); ++i) {
+                // puts("c");
+                std::cout<< i<<std::endl;
+                // std::cout<<rcv.getCnt()<<std::endl;
+                // std::cout<<zcs[i]->crt_path<<std::endl;
                 if (zcs[i] == nullptr) continue;  // 跳过空指针
                 if (crypto::Certificate::verifyWithCert(zcs[i]->crt_path, rcv.getCnt(), rcv.getSig())) {
+                    // puts("d");
+                    // std::cout<<zcs[i]<<std::endl;
+                    // std::cout<<rcv.getCnt()<<std::endl;
                     zcs[i]->secret = dh->computeSharedSecretHex(rcv.getCnt());
+                    // std::cout<<zcs[i]->secret<<std::endl;
+                    break;
+                }else{
+                    puts("faild");
                 }
             }
         }else{
-            for (int i = 0; i < zcs.size(); ++i) {
+            // std::cout<<"ccc"<<std::endl;
+            for (int i = zcs.size(); i >=1; --i) {
                 if (zcs[i] == nullptr) continue;  // 跳过空指针
                 if (crypto::Certificate::verifyWithCert(zcs[i]->crt_path, rcv.getCnt(), rcv.getSig())) {
                     
@@ -137,16 +154,18 @@ void DHManager::DHrecv(){
                     std::string hmac_key = crypto::Hash::sha256(zcs[i]->secret + "hmac");
                     std::string ciphertext = rcv.getCnt();
                     std::string tag = rcv.getTag();
-                    // std::cout << "tag长度（字节）: " << tag.size() << std::endl;
+                    // std::cout  <<"secret:"<< zcs[i]->secret << std::endl;
                     if (crypto::MAC::hmac_sha256(hmac_key, ciphertext) != tag) {
                         std::cerr << "❌ 消息被篡改" << std::endl;
                     } else {
                         std::string plain = crypto::CryptoBox::decrypt(aes_key, ciphertext);
                         std::cout << "✅ 解密成功: " << plain << std::endl;
                     }
-
+                    break;
                 }
             }
         }
+        // puts("end");
     });
+    // puts("end2");
 }
